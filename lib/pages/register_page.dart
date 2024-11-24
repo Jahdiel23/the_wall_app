@@ -1,28 +1,24 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:the_wall_app/components/button.dart';
 import 'package:the_wall_app/components/text_field.dart';
-
 class RegisterPage extends StatefulWidget {
   final Function()? onTap;
   const RegisterPage({super.key, required this.onTap});
-
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
-
 class _RegisterPageState extends State<RegisterPage> {
   final emailTextController = TextEditingController();
   final passwordTextController = TextEditingController();
   final confirmPasswordTextController = TextEditingController();
-
   // Display error message
   void displayMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
   }
-
   // Sign user up
   void signUp() async {
     // Show loading circle
@@ -32,20 +28,29 @@ class _RegisterPageState extends State<RegisterPage> {
         child: CircularProgressIndicator(),
       ),
     );
-
     // Ensure passwords match
     if (passwordTextController.text != confirmPasswordTextController.text) {
       Navigator.pop(context); // Close loading dialog
       displayMessage("Passwords don't match");
       return;
     }
-
     try {
       // Try creating the user
+      UserCredential userCredential =
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: emailTextController.text.trim(),
-        password: passwordTextController.text.trim(),
+        email: emailTextController.text,
+        password: passwordTextController.text,
       );
+// after creating the user, create a new document in cloud firebase called Users
+      FirebaseFirestore.instance.
+      collection("Users")
+      .doc(userCredential.user!.email)
+      .set({
+        'username' : emailTextController.text.split('@')[0], //inital user name
+        'bio' : 'Empty bio..' //inital empty bio
+        // add any additional fields as needed
+      });
+
 
 //pop loading circle
      if (context.mounted) Navigator.pop(context);
@@ -56,7 +61,6 @@ class _RegisterPageState extends State<RegisterPage> {
     displayMessage(e.code);
   }
 }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,14 +74,12 @@ class _RegisterPageState extends State<RegisterPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 50),
-
                   // Logo
                   const Icon(
                     Icons.lock,
                     size: 100,
                   ),
                   const SizedBox(height: 50),
-
                   // Welcome message
                   Text(
                     "Let's create an account for you!",
@@ -87,7 +89,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                   const SizedBox(height: 25),
-
                   // Email text field
                   MyTextField(
                     controller: emailTextController,
@@ -95,7 +96,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     obscureText: false,
                   ),
                   const SizedBox(height: 10),
-
                   // Password text field
                   MyTextField(
                     controller: passwordTextController,
@@ -103,7 +103,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     obscureText: true,
                   ),
                   const SizedBox(height: 10),
-
                   // Confirm password text field
                   MyTextField(
                     controller: confirmPasswordTextController,
@@ -111,11 +110,9 @@ class _RegisterPageState extends State<RegisterPage> {
                     obscureText: true,
                   ),
                   const SizedBox(height: 25),
-
                   // Sign-up button
                   MyButton(onTap: signUp, text: 'Sign Up'),
                   const SizedBox(height: 25),
-
                   // Redirect to login page
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

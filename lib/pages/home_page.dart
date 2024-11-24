@@ -1,29 +1,26 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
+import 'package:the_wall_app/components/drawer.dart';
 import 'package:the_wall_app/components/text_field.dart';
 import 'package:the_wall_app/components/wall_post.dart';
-
+import 'package:flutter/material.dart';
+import 'package:the_wall_app/pages/profile_page.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
-
   @override
   State<HomePage> createState() => _HomePageState();
 }
-
 class _HomePageState extends State<HomePage> {
   final currentUser = FirebaseAuth.instance.currentUser!; // Usuario actual
-
   final textController = TextEditingController(); // Controlador de texto
-
+  //sign user out
   void signOut() {
     FirebaseAuth.instance.signOut(); // Cerrar sesión
   }
-
   void postMessage() {
     // Publicar solo si hay texto
     if (textController.text.isNotEmpty) {
-      FirebaseFirestore.instance.collection("User Posts").add({
+        FirebaseFirestore.instance.collection("User Posts").add({
         'Message': textController.text,
         'UserEmail': currentUser.email,
         'TimeStamp': Timestamp.now(),
@@ -31,8 +28,15 @@ class _HomePageState extends State<HomePage> {
       });
       textController.clear();
     }
-  }
-
+    }
+    //navigate to profile page
+    void goToProfilePage(){
+      //pop menu drawer
+      Navigator.pop(context);
+      // go to profile page
+      Navigator.push(context,
+      MaterialPageRoute(builder: (context) => ProfilePage()));
+    }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,6 +50,10 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.logout),
           )
         ],
+      ),
+      drawer: MyDrawer(
+        onTapProfile: goToProfilePage,
+        onTapLogout: signOut,
       ),
       body: Center(
         child: Column(
@@ -101,10 +109,9 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             Text(
-              "Logged in as: " + currentUser.email!,
-              style: TextStyle(color: Colors.grey),
+              "Logged in as: ${currentUser.email!}",
+              style: const TextStyle(color: Colors.grey),
            ),
-
             const SizedBox(
               height: 50,
               )

@@ -18,9 +18,11 @@ class MyButton extends StatelessWidget {
           color: Colors.black,
         ),
         child: Center(
-          child: Text(text, 
-          style: const TextStyle(color: Colors.white,
-          fontWeight: FontWeight.bold, fontSize: 15),),
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold, fontSize: 15),),
         ),
       ),
     );

@@ -3,7 +3,6 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
-
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
 /// Example:
@@ -48,21 +47,19 @@ class DefaultFirebaseOptions {
         );
     }
   }
-
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB604P2EZ0wF2ylirMe1AchjEmJExUvnHo',
-    appId: '1:45417873580:android:ac5062e07b6ce98146df09',
-    messagingSenderId: '45417873580',
-    projectId: 'thewallapp-ef0de',
-    storageBucket: 'thewallapp-ef0de.firebasestorage.app',
+    apiKey: 'AIzaSyB9PIXq8ycWWWhn1x6blm4gCpy19OlqSJ0',
+    appId: '1:257671568822:android:9a7cfb8e9555eda5d43517',
+    messagingSenderId: '257671568822',
+    projectId: 'walltutorial-69c9e',
+    storageBucket: 'walltutorial-69c9e.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCCAB91m0KCDSvxdxEOaNJLHEwE36ckHHA',
-    appId: '1:45417873580:ios:99b86b7e009ab2ea46df09',
-    messagingSenderId: '45417873580',
-    projectId: 'thewallapp-ef0de',
-    storageBucket: 'thewallapp-ef0de.firebasestorage.app',
-    iosBundleId: 'com.example.theWallApp',
+    apiKey: 'AIzaSyAUpR1O6rbniIWRR5NvvpjgdpT9K2x6RJw',
+    appId: '1:257671568822:ios:233641091a3665d8d43517',
+    messagingSenderId: '257671568822',
+    projectId: 'walltutorial-69c9e',
+    storageBucket: 'walltutorial-69c9e.firebasestorage.app',
+    iosBundleId: 'com.example.socialMediaApp',
   );
 }
