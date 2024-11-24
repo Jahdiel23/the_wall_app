@@ -35,19 +35,30 @@ class _ProfilePageState extends State<ProfilePage> {
         email = user.email;
       });
 
-      // Obtener datos adicionales (como username y bio) desde Firestore
-      DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      
-      if (snapshot.exists) {
+      try {
+        // Obtener datos adicionales (como username y bio) desde Firestore
+        DocumentSnapshot snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (snapshot.exists) {
+          setState(() {
+            username = snapshot.get('username') ?? 'No username set';
+            bio = snapshot.get('bio') ?? 'No bio available';
+          });
+        } else {
+          // Si el documento no existe
+          setState(() {
+            username = 'No username set';
+            bio = 'No bio available';
+          });
+        }
+      } catch (e) {
+        // Manejo de errores (por ejemplo, si no hay conexión o hay problemas con Firestore)
         setState(() {
-          username = snapshot['username'] ?? 'No username set';
-          bio = snapshot['bio'] ?? 'No bio available';
-        });
-      } else {
-        // Cambié el mensaje aquí
-        setState(() {
-          username = 'No username set';
-          bio = 'No bio available';
+          username = 'Error loading username';
+          bio = 'Error loading bio';
         });
       }
     }
@@ -58,14 +69,24 @@ class _ProfilePageState extends State<ProfilePage> {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
-      // Actualizar los datos en Firestore
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'username': usernameController.text,
-        'bio': bioController.text,
-      }, SetOptions(merge: true)); // Merge para no sobrescribir los demás campos
+      try {
+        // Actualizar los datos en Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'username': usernameController.text,
+          'bio': bioController.text,
+        }, SetOptions(merge: true)); // Merge para no sobrescribir los demás campos
 
-      // Recargar los datos
-      loadUserData();
+        // Recargar los datos
+        loadUserData();
+      } catch (e) {
+        // Manejo de errores al actualizar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update data: $e')),
+        );
+      }
     }
   }
 
@@ -74,12 +95,22 @@ class _ProfilePageState extends State<ProfilePage> {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'bio': FieldValue.delete(),
-      });
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+          'bio': FieldValue.delete(),
+        });
 
-      // Recargar los datos
-      loadUserData();
+        // Recargar los datos
+        loadUserData();
+      } catch (e) {
+        // Manejo de errores al borrar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete bio: $e')),
+        );
+      }
     }
   }
 
@@ -93,17 +124,17 @@ class _ProfilePageState extends State<ProfilePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Mostrar el email
-            Text('Email: $email', style: TextStyle(fontSize: 18)),
+            Text('Email: $email', style: const TextStyle(fontSize: 18)),
 
             const SizedBox(height: 20),
 
             // Mostrar el username
-            Text('Username: $username', style: TextStyle(fontSize: 18)),
+            Text('Username: $username', style: const TextStyle(fontSize: 18)),
 
             const SizedBox(height: 20),
 
             // Mostrar la bio
-            Text('Bio: $bio', style: TextStyle(fontSize: 18)),
+            Text('Bio: $bio', style: const TextStyle(fontSize: 18)),
 
             const SizedBox(height: 20),
 
