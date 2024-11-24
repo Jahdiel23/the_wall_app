@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 String formatData(Timestamp timestamp){
   //timestam is the objet we retrive from firebase
   //so to dislay it, lests convert it to a string

@@ -1,141 +1,147 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:the_wall_app/components/text_box.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  _ProfilePageState createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  //user
-  final currentUser = FirebaseAuth.instance.currentUser!;
-  // all users
-  final usersCollection = FirebaseFirestore.instance.collection("Users");
+  // Variables para almacenar los datos
+  String? username;
+  String? email;
+  String? bio;
 
-  Future<void> editField(String field) async{
-    String newValue = "";
-    await showAdaptiveDialog(
-      context: context,
-     builder: (context) => AlertDialog(
-      backgroundColor: Colors.grey[900],
-      title: Text(
-        "Edit $field",
-        style: const TextStyle(color: Colors.white),
-        ),
-        content: TextField(
-          autofocus: true,
-          style: TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: "Enter new $field",
-            hintStyle: TextStyle(color: Colors.grey)
-          ),
-          onChanged: (value) {
-            newValue = value;
-          },
-        ),
-        actions: [
-          //cancel button
-          TextButton(
-            child: Text('Cancel',
-            style: TextStyle(color: Colors.white),
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
+  // Controladores para los campos de texto
+  final usernameController = TextEditingController();
+  final bioController = TextEditingController();
 
-          //save button
-          TextButton(
-            child: Text('Save',
-            style: TextStyle(color: Colors.white),
-            ),
-            onPressed: () => Navigator.of(context).pop(newValue),
-          ),
+  @override
+  void initState() {
+    super.initState();
+    // Cargar datos del usuario al iniciar la página
+    loadUserData();
+  }
 
-        ],
-     ),
-     );
+  // Función para cargar los datos del usuario desde Firestore
+  Future<void> loadUserData() async {
+    User? user = FirebaseAuth.instance.currentUser;
 
-     //update in firestore
-     if (newValue.trim().length > 0){
-      //only update if there is something in the textfield
-      await usersCollection.doc(currentUser.email).update({field : newValue});
+    if (user != null) {
+      setState(() {
+        email = user.email;
+      });
 
+      // Obtener datos adicionales (como username y bio) desde Firestore
+      DocumentSnapshot snapshot = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      
+      if (snapshot.exists) {
+        setState(() {
+          username = snapshot['username'] ?? 'No username set';
+          bio = snapshot['bio'] ?? 'No bio available';
+        });
+      } else {
+        // Cambié el mensaje aquí
+        setState(() {
+          username = 'No username set';
+          bio = 'No bio available';
+        });
+      }
+    }
+  }
 
-     }
+  // Función para actualizar el username o bio
+  Future<void> updateUserData() async {
+    User? user = FirebaseAuth.instance.currentUser;
 
+    if (user != null) {
+      // Actualizar los datos en Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'username': usernameController.text,
+        'bio': bioController.text,
+      }, SetOptions(merge: true)); // Merge para no sobrescribir los demás campos
+
+      // Recargar los datos
+      loadUserData();
+    }
+  }
+
+  // Función para eliminar los datos de bio
+  Future<void> deleteBio() async {
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'bio': FieldValue.delete(),
+      });
+
+      // Recargar los datos
+      loadUserData();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[300],
-      appBar: AppBar(title: Text('P R O F I L E P A G E'),
-      backgroundColor: Colors.grey[900],
+      appBar: AppBar(title: const Text('Profile')),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Mostrar el email
+            Text('Email: $email', style: TextStyle(fontSize: 18)),
+
+            const SizedBox(height: 20),
+
+            // Mostrar el username
+            Text('Username: $username', style: TextStyle(fontSize: 18)),
+
+            const SizedBox(height: 20),
+
+            // Mostrar la bio
+            Text('Bio: $bio', style: TextStyle(fontSize: 18)),
+
+            const SizedBox(height: 20),
+
+            // Formulario para cambiar username y bio
+            TextField(
+              controller: usernameController,
+              decoration: const InputDecoration(
+                labelText: 'Update Username',
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            TextField(
+              controller: bioController,
+              decoration: const InputDecoration(
+                labelText: 'Update Bio',
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Botón para actualizar los datos
+            ElevatedButton(
+              onPressed: updateUserData,
+              child: const Text('Update Info'),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Botón para borrar la bio
+            ElevatedButton(
+              onPressed: deleteBio,
+              child: const Text('Delete Bio'),
+            ),
+          ],
+        ),
       ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-        .collection("Users")
-        .doc(currentUser.email)
-        .snapshots(),
-        builder: (context, snapshot) {
-          //get user data
-          if (snapshot.hasData){
-            final userData = snapshot.data!.data() as Map<String, dynamic>;
-
-            return ListView(
-        children: [
-          const SizedBox(height: 50),
-          // porfile pic
-          Icon(Icons.person, size: 72,),
-
-          //user email
-          Text(currentUser.email!,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.grey[700]
-          ),
-          ),
-          const SizedBox(height: 10),
-
-          //user details
-          Padding(
-            padding: const EdgeInsets.only(left: 25.0),
-            child: Text('My details', 
-            style: TextStyle(color: Colors.grey[600]),),
-          ),
-
-          //username
-           MyTextBox(text: userData['username'], 
-           sectionName: 'User name',
-           onPressed: () => editField('username'),),
-
-          //bio
-          MyTextBox(text: userData['bio'], 
-           sectionName: 'bio',
-           onPressed: () => editField('bio'),),
-
-           const SizedBox(height: 50),
-
-          //user posts
-          Padding(
-            padding: const EdgeInsets.only(left: 25.0),
-            child: Text('My posts', 
-            style: TextStyle(color: Colors.grey[600]),),
-          ),
-
-        ],
-      );
-
-          }else if (snapshot.hasError) {
-            return Center(
-              child: Text('Error${snapshot.error}'),
-            );
-          }
-          return const Center(child: CircularProgressIndicator(),);
-        },)
     );
   }
 }

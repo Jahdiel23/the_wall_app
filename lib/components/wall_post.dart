@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:the_wall_app/auth/delete_button.dart';
 import 'package:the_wall_app/components/comment_button.dart';
 import 'package:the_wall_app/components/comments.dart';
 import 'package:the_wall_app/components/like_button.dart';
@@ -25,11 +26,8 @@ class WallPost extends StatefulWidget {
 }
 
 class _WallPostState extends State<WallPost> {
-  // Usuario actual
   final currentUser = FirebaseAuth.instance.currentUser!;
   bool isLiked = false;
-
-  // Controlador para texto de comentarios
   final _commentTextController = TextEditingController();
 
   @override
@@ -38,44 +36,44 @@ class _WallPostState extends State<WallPost> {
     isLiked = widget.likes.contains(currentUser.email);
   }
 
-  // Alternar "Me gusta"
+  @override
+  void didUpdateWidget(covariant WallPost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.likes != oldWidget.likes) {
+      setState(() {
+        isLiked = widget.likes.contains(currentUser.email);
+      });
+    }
+  }
+
   void toggleLike() async {
     setState(() {
       isLiked = !isLiked;
     });
 
     try {
-      DocumentReference postRef =
-          FirebaseFirestore.instance.collection('User Posts').doc(widget.postId);
+      DocumentReference postRef = FirebaseFirestore.instance.collection('User Posts').doc(widget.postId);
 
       if (isLiked) {
-        // Agregar usuario a la lista de likes
         await postRef.update({
           'Likes': FieldValue.arrayUnion([currentUser.email]),
         });
       } else {
-        // Eliminar usuario de la lista de likes
         await postRef.update({
           'Likes': FieldValue.arrayRemove([currentUser.email]),
         });
       }
     } catch (e) {
-      // Manejo de errores
       setState(() {
-        isLiked = !isLiked; // Revertir el cambio
+        isLiked = !isLiked;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating likes: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating likes: $e')));
     }
   }
 
-  // Agregar un comentario
   void addComment(String commentText) async {
     if (commentText.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Comment cannot be empty')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Comment cannot be empty')));
       return;
     }
 
@@ -90,16 +88,13 @@ class _WallPostState extends State<WallPost> {
         "CommentTime": Timestamp.now(),
       });
 
-      _commentTextController.clear(); // Limpiar campo de texto
-      Navigator.pop(context); // Cerrar diálogo
+      _commentTextController.clear();  // Clear the text field after posting the comment
+      // No need to navigate manually, StreamBuilder will handle the update.
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding comment: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding comment: $e')));
     }
   }
 
-  // Mostrar diálogo para comentarios
   void showCommentDialog() {
     showDialog(
       context: context,
@@ -110,7 +105,6 @@ class _WallPostState extends State<WallPost> {
           decoration: const InputDecoration(hintText: "Write a comment..."),
         ),
         actions: [
-          // Botón de cancelar
           TextButton(
             onPressed: () {
               _commentTextController.clear();
@@ -118,13 +112,44 @@ class _WallPostState extends State<WallPost> {
             },
             child: const Text("Cancel"),
           ),
-          // Botón de publicar
           TextButton(
             onPressed: () {
               addComment(_commentTextController.text);
+              Navigator.pop(context); // Close dialog after posting the comment
             },
             child: const Text("Post"),
           ),
+        ],
+      ),
+    );
+  }
+
+  void deletePost() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Post"),
+        content: const Text("Are you sure you want to delete this post?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(onPressed: () async {
+            try {
+              // Use Future.wait to delete all comments at once
+              final commentDocs = await FirebaseFirestore.instance
+                  .collection("User Posts")
+                  .doc(widget.postId)
+                  .collection("Comments")
+                  .get();
+
+              final deleteComments = commentDocs.docs.map((doc) => doc.reference.delete()).toList();
+
+              await Future.wait(deleteComments); // Delete all comments at once
+              await FirebaseFirestore.instance.collection("User Posts").doc(widget.postId).delete();
+              Navigator.pop(context); // Close dialog after successful delete
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting post: $e')));
+            }
+          }, child: const Text("Delete")),
         ],
       ),
     );
@@ -134,7 +159,7 @@ class _WallPostState extends State<WallPost> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(8),
       ),
       margin: const EdgeInsets.symmetric(vertical: 25, horizontal: 25),
@@ -142,41 +167,39 @@ class _WallPostState extends State<WallPost> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Mensaje del post
-          Column(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.message),
-              const SizedBox(height: 5),
-              Text(
-                widget.user,
-                style: TextStyle(color: Colors.grey[500]),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.message),
+                  const SizedBox(height: 5),
+                  Text(
+                    widget.user,
+                    style: TextStyle(color: Colors.grey[500]),
+                  ),
+                ],
               ),
+              if (widget.user == currentUser.email) DeleteButton(onTap: deletePost),
             ],
           ),
           const SizedBox(height: 20),
-          // Botones de "Me gusta" y comentarios
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  LikeButton(
-                    isLiked: isLiked,
-                    onTap: toggleLike,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    widget.likes.length.toString(),
-                    style: const TextStyle(color: Colors.grey),
-                  ),
+                  LikeButton(isLiked: isLiked, onTap: toggleLike),
+                  const SizedBox(width: 8),
+                  Text(widget.likes.length.toString(), style: const TextStyle(color: Colors.grey)),
                 ],
               ),
               CommentButton(onTap: showCommentDialog),
             ],
           ),
           const SizedBox(height: 20),
-          // Lista de comentarios
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection("User Posts")
@@ -186,26 +209,24 @@ class _WallPostState extends State<WallPost> {
                 .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
+                return const Center(child: CircularProgressIndicator());
               }
 
               final comments = snapshot.data!.docs;
 
-              return ListView(
+              return ListView.builder(
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: snapshot.data!.docs.map((doc ){
-                  final comentData = doc.data() as Map<String, dynamic>;
-                
-                  return Comment(
-                    text: comentData["Comment text"],
-                    user: comentData["CommentedBy"],
-                    time: formatData(comentData["Commented time"])
+                itemCount: comments.length,
+                itemBuilder: (context, index) {
+                  final commentData = comments[index].data() as Map<String, dynamic>;
+                  final comment = Comment(
+                    text: commentData['CommentText'],
+                    user: commentData['CommentedBy'],
+                    time: formatData(commentData['CommentTime']),
                   );
-                  }).toList(),
-                        
+
+                  return comment;
+                },
               );
             },
           ),

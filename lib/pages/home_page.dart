@@ -1,26 +1,30 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:the_wall_app/components/drawer.dart';
+import 'package:the_wall_app/components/my_liste_title.dart';
 import 'package:the_wall_app/components/text_field.dart';
 import 'package:the_wall_app/components/wall_post.dart';
-import 'package:flutter/material.dart';
 import 'package:the_wall_app/pages/profile_page.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
+
 class _HomePageState extends State<HomePage> {
-  final currentUser = FirebaseAuth.instance.currentUser!; // Usuario actual
-  final textController = TextEditingController(); // Controlador de texto
-  //sign user out
+  final currentUser = FirebaseAuth.instance.currentUser!;
+  final textController = TextEditingController();
+
   void signOut() {
-    FirebaseAuth.instance.signOut(); // Cerrar sesión
+    FirebaseAuth.instance.signOut();
   }
+
   void postMessage() {
-    // Publicar solo si hay texto
     if (textController.text.isNotEmpty) {
-        FirebaseFirestore.instance.collection("User Posts").add({
+      FirebaseFirestore.instance.collection("User Posts").add({
         'Message': textController.text,
         'UserEmail': currentUser.email,
         'TimeStamp': Timestamp.now(),
@@ -28,32 +32,37 @@ class _HomePageState extends State<HomePage> {
       });
       textController.clear();
     }
-    }
-    //navigate to profile page
-    void goToProfilePage(){
-      //pop menu drawer
-      Navigator.pop(context);
-      // go to profile page
-      Navigator.push(context,
-      MaterialPageRoute(builder: (context) => ProfilePage()));
-    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[300],
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text("The Wall"),
-        backgroundColor: Colors.grey[900],
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          ),
+        ),
         actions: [
           IconButton(
-            onPressed: signOut, // Botón de cerrar sesión
+            onPressed: signOut,
             icon: const Icon(Icons.logout),
-          )
+          ),
         ],
       ),
       drawer: MyDrawer(
-        onTapProfile: goToProfilePage,
         onTapLogout: signOut,
+        onTapProfile: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ProfilePage()),
+          );
+        },
       ),
       body: Center(
         child: Column(
@@ -68,7 +77,7 @@ class _HomePageState extends State<HomePage> {
                   if (snapshot.hasData) {
                     final posts = snapshot.data!.docs;
                     return ListView.builder(
-                      itemCount: snapshot.data!.docs.length,
+                      itemCount: posts.length,
                       itemBuilder: (context, index) {
                         final post = posts[index];
                         return WallPost(
@@ -109,12 +118,10 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             Text(
-              "Logged in as: ${currentUser.email!}",
-              style: const TextStyle(color: Colors.grey),
-           ),
-            const SizedBox(
-              height: 50,
-              )
+              "Logged in as: " + currentUser.email!,
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 50),
           ],
         ),
       ),
