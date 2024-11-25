@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+/// Página de perfil del usuario.
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -10,7 +11,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // Variables para almacenar los datos
+  // Variables para almacenar los datos del usuario
   String? username;
   String? email;
   String? bio;
@@ -22,123 +23,106 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    // Cargar datos del usuario al iniciar la página
+    // Cargar datos del usuario cuando se inicia la página
     loadUserData();
   }
 
-  // Función para cargar los datos del usuario desde Firestore
+  /// Carga los datos del usuario desde Firebase Auth y Firestore.
   Future<void> loadUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
       setState(() {
-        email = user.email;
+        email = user.email; // Asignar email directamente desde Firebase Auth.
       });
 
-      try {
-        // Obtener datos adicionales (como username y bio) desde Firestore
-        DocumentSnapshot snapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
+      // Cargar datos adicionales desde Firestore.
+      DocumentSnapshot snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
-        if (snapshot.exists) {
-          setState(() {
-            username = snapshot.get('username') ?? 'No username set';
-            bio = snapshot.get('bio') ?? 'No bio available';
-          });
-        } else {
-          // Si el documento no existe
-          setState(() {
-            username = 'No username set';
-            bio = 'No bio available';
-          });
-        }
-      } catch (e) {
-        // Manejo de errores (por ejemplo, si no hay conexión o hay problemas con Firestore)
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>;
         setState(() {
-          username = 'Error loading username';
-          bio = 'Error loading bio';
+          username = data.containsKey('username') ? data['username'] : 'No username set'; // Verifica si el campo existe.
+          bio = data.containsKey('bio') ? data['bio'] : 'No bio available'; // Verifica si el campo existe.
+        });
+      } else {
+        // Si no hay datos en Firestore, establecer valores por defecto.
+        setState(() {
+          username = 'No username set';
+          bio = 'No bio available';
         });
       }
     }
   }
 
-  // Función para actualizar el username o bio
+  /// Actualiza el username y bio del usuario en Firestore.
   Future<void> updateUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
-      try {
-        // Actualizar los datos en Firestore
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .set({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(
+        {
           'username': usernameController.text,
           'bio': bioController.text,
-        }, SetOptions(merge: true)); // Merge para no sobrescribir los demás campos
+        },
+        SetOptions(merge: true), // Combinar con los datos existentes en Firestore.
+      );
 
-        // Recargar los datos
-        loadUserData();
-      } catch (e) {
-        // Manejo de errores al actualizar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update data: $e')),
-        );
-      }
+      // Recargar los datos del usuario.
+      loadUserData();
     }
   }
 
-  // Función para eliminar los datos de bio
+  /// Elimina la bio del usuario en Firestore.
   Future<void> deleteBio() async {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .update({
-          'bio': FieldValue.delete(),
-        });
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+        'bio': FieldValue.delete(), // Eliminar la bio.
+      });
 
-        // Recargar los datos
-        loadUserData();
-      } catch (e) {
-        // Manejo de errores al borrar
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete bio: $e')),
-        );
-      }
+      // Recargar los datos del usuario.
+      loadUserData();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'), // Título de la página.
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Mostrar el email
+            // Mostrar el email del usuario.
             Text('Email: $email', style: const TextStyle(fontSize: 18)),
 
             const SizedBox(height: 20),
 
-            // Mostrar el username
+            // Mostrar el username.
             Text('Username: $username', style: const TextStyle(fontSize: 18)),
 
             const SizedBox(height: 20),
 
-            // Mostrar la bio
+            // Mostrar la bio.
             Text('Bio: $bio', style: const TextStyle(fontSize: 18)),
 
             const SizedBox(height: 20),
 
-            // Formulario para cambiar username y bio
+            // Campo para actualizar el username.
             TextField(
               controller: usernameController,
               decoration: const InputDecoration(
@@ -148,6 +132,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
             const SizedBox(height: 10),
 
+            // Campo para actualizar la bio.
             TextField(
               controller: bioController,
               decoration: const InputDecoration(
@@ -157,7 +142,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
             const SizedBox(height: 20),
 
-            // Botón para actualizar los datos
+            // Botón para actualizar la información del usuario.
             ElevatedButton(
               onPressed: updateUserData,
               child: const Text('Update Info'),
@@ -165,7 +150,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
             const SizedBox(height: 20),
 
-            // Botón para borrar la bio
+            // Botón para borrar la bio.
             ElevatedButton(
               onPressed: deleteBio,
               child: const Text('Delete Bio'),

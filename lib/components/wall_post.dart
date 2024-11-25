@@ -8,10 +8,12 @@ import 'package:the_wall_app/components/like_button.dart';
 import 'package:the_wall_app/helpers/helpers_methodos.dart';
 
 class WallPost extends StatefulWidget {
-  final String message;
-  final String user;
-  final String postId;
-  final List<String> likes;
+  // Este widget representa una publicación en el muro.
+
+  final String message; // Mensaje de la publicación.
+  final String user; // Usuario que creó la publicación.
+  final String postId; // ID único de la publicación.
+  final List<String> likes; // Lista de correos de usuarios que han dado like.
 
   const WallPost({
     super.key,
@@ -27,17 +29,24 @@ class WallPost extends StatefulWidget {
 
 class _WallPostState extends State<WallPost> {
   final currentUser = FirebaseAuth.instance.currentUser!;
+  // Obtiene al usuario actualmente autenticado.
+
   bool isLiked = false;
+  // Indica si el usuario actual ha dado like a la publicación.
+
   final _commentTextController = TextEditingController();
+  // Controlador para el campo de texto de los comentarios.
 
   @override
   void initState() {
     super.initState();
     isLiked = widget.likes.contains(currentUser.email);
+    // Determina si el usuario ya dio like a la publicación.
   }
 
   @override
   void didUpdateWidget(covariant WallPost oldWidget) {
+    // Actualiza el estado cuando cambian los datos del widget.
     super.didUpdateWidget(oldWidget);
     if (widget.likes != oldWidget.likes) {
       setState(() {
@@ -47,12 +56,15 @@ class _WallPostState extends State<WallPost> {
   }
 
   void toggleLike() async {
+    // Alterna el estado de like y actualiza Firestore.
+
     setState(() {
       isLiked = !isLiked;
     });
 
     try {
-      DocumentReference postRef = FirebaseFirestore.instance.collection('User Posts').doc(widget.postId);
+      DocumentReference postRef =
+          FirebaseFirestore.instance.collection('User Posts').doc(widget.postId);
 
       if (isLiked) {
         await postRef.update({
@@ -64,16 +76,21 @@ class _WallPostState extends State<WallPost> {
         });
       }
     } catch (e) {
+      // Revertir el cambio si ocurre un error.
       setState(() {
         isLiked = !isLiked;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating likes: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating likes: $e')));
     }
   }
 
   void addComment(String commentText) async {
+    // Añade un nuevo comentario a la publicación.
+
     if (commentText.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Comment cannot be empty')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Comment cannot be empty')));
       return;
     }
 
@@ -88,14 +105,16 @@ class _WallPostState extends State<WallPost> {
         "CommentTime": Timestamp.now(),
       });
 
-      _commentTextController.clear();  // Clear the text field after posting the comment
-      // No need to navigate manually, StreamBuilder will handle the update.
+      _commentTextController.clear();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding comment: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding comment: $e')));
     }
   }
 
   void showCommentDialog() {
+    // Muestra un cuadro de diálogo para añadir un comentario.
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -115,7 +134,7 @@ class _WallPostState extends State<WallPost> {
           TextButton(
             onPressed: () {
               addComment(_commentTextController.text);
-              Navigator.pop(context); // Close dialog after posting the comment
+              Navigator.pop(context);
             },
             child: const Text("Post"),
           ),
@@ -125,6 +144,8 @@ class _WallPostState extends State<WallPost> {
   }
 
   void deletePost() {
+    // Elimina la publicación y sus comentarios asociados.
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -132,24 +153,31 @@ class _WallPostState extends State<WallPost> {
         content: const Text("Are you sure you want to delete this post?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          TextButton(onPressed: () async {
-            try {
-              // Use Future.wait to delete all comments at once
-              final commentDocs = await FirebaseFirestore.instance
-                  .collection("User Posts")
-                  .doc(widget.postId)
-                  .collection("Comments")
-                  .get();
+          TextButton(
+              onPressed: () async {
+                try {
+                  final commentDocs = await FirebaseFirestore.instance
+                      .collection("User Posts")
+                      .doc(widget.postId)
+                      .collection("Comments")
+                      .get();
 
-              final deleteComments = commentDocs.docs.map((doc) => doc.reference.delete()).toList();
+                  final deleteComments =
+                      commentDocs.docs.map((doc) => doc.reference.delete()).toList();
 
-              await Future.wait(deleteComments); // Delete all comments at once
-              await FirebaseFirestore.instance.collection("User Posts").doc(widget.postId).delete();
-              Navigator.pop(context); // Close dialog after successful delete
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting post: $e')));
-            }
-          }, child: const Text("Delete")),
+                  await Future.wait(deleteComments);
+                  await FirebaseFirestore.instance
+                      .collection("User Posts")
+                      .doc(widget.postId)
+                      .delete();
+
+                  Navigator.pop(context);
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error deleting post: $e')));
+                }
+              },
+              child: const Text("Delete")),
         ],
       ),
     );
@@ -182,7 +210,8 @@ class _WallPostState extends State<WallPost> {
                   ),
                 ],
               ),
-              if (widget.user == currentUser.email) DeleteButton(onTap: deletePost),
+              if (widget.user == currentUser.email)
+                DeleteButton(onTap: deletePost),
             ],
           ),
           const SizedBox(height: 20),
@@ -193,7 +222,8 @@ class _WallPostState extends State<WallPost> {
                 children: [
                   LikeButton(isLiked: isLiked, onTap: toggleLike),
                   const SizedBox(width: 8),
-                  Text(widget.likes.length.toString(), style: const TextStyle(color: Colors.grey)),
+                  Text(widget.likes.length.toString(),
+                      style: const TextStyle(color: Colors.grey)),
                 ],
               ),
               CommentButton(onTap: showCommentDialog),
@@ -218,7 +248,8 @@ class _WallPostState extends State<WallPost> {
                 shrinkWrap: true,
                 itemCount: comments.length,
                 itemBuilder: (context, index) {
-                  final commentData = comments[index].data() as Map<String, dynamic>;
+                  final commentData =
+                      comments[index].data() as Map<String, dynamic>;
                   final comment = Comment(
                     text: commentData['CommentText'],
                     user: commentData['CommentedBy'],
